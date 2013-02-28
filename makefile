@@ -3,9 +3,9 @@ DEBUG_FLAGS := -DDEBUG -g -O0
 NDEBUG_FLAGS := -g -O3
 
 ifeq ($(UNAME),Darwin)
-	CPP = clang -std=gnu++0x -DMACOS
+	CPP = clang++ -std=c++0x -stdlib=libc++ -DMACOS
 	CC = clang -DMACOS
-	LINKER = clang -stdlib=libstdc++ -lstdc++ -L../libuv -framework Cocoa
+	LINKER = clang++ -stdlib=libc++ -Ldeps/http_parser -L../libuv -framework Cocoa
 	LINKER_OPTS := $(NDEBUG_FLAGS)
 	LINKER_DEBUG_OPTS := $(DEBUG_FLAGS)
 else
@@ -20,6 +20,7 @@ BUILD_DIR = build
 
 CFLAGS := \
 	-I../libuv/include \
+	-Ideps/http_parser \
 	-c \
 	-Wall \
 	-pthread \
@@ -27,6 +28,7 @@ CFLAGS := \
 	-g \
 
 JUMBLE_SOURCES = \
+				 http_fetch_op.cpp \
 				 cmd_options.cpp \
 				 disk.cpp \
 				 nodecpp.cpp \
@@ -43,8 +45,8 @@ all: build-dir $(TARGETS)
 build-dir:
 	@if test ! -d $(BUILD_DIR); then mkdir -p $(BUILD_DIR); fi
 
-$(JUMBLE_TARGET): $(JUMBLE_OBJECTS)
-	$(LINKER) $(LINKER_OPTS) -luv $(JUMBLE_OBJECTS) -o $(JUMBLE_TARGET)
+$(JUMBLE_TARGET): $(JUMBLE_OBJECTS) $(HTTP_PARSER_OBJECTS)
+	$(LINKER) $(LINKER_OPTS) -luv -lhttp_parser $(JUMBLE_OBJECTS) -o $(JUMBLE_TARGET)
 
 $(BUILD_DIR)/%.o: %.cpp
 	$(CPP) $(CFLAGS) $< -o $@

@@ -3,7 +3,7 @@
 #include <string>
 #include <stdint.h>
 #include <iostream>
-#include <tr1/memory>
+#include <memory>
 #include <iosfwd>
 #include <vector>
 #include "logger_decls.h"
@@ -13,7 +13,7 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 
-using std::tr1::shared_ptr;
+using std::shared_ptr;
 
 bool folder_exists(const std::string &path);
 bool file_exists(const std::string &file_path);

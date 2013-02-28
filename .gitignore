@@ -1,3 +1,6 @@
+*.pre
+*.swp
+
 # Compiled Object files
 *.slo
 *.lo
@@ -12,4 +15,6 @@
 *.la
 *.a
 
+test_fast
+test_g
 nodecpp
