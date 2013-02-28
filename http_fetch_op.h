@@ -11,14 +11,14 @@ void http_get(const std::string &hostname, int port, response_callback_t &&callb
 
 struct http_fetch_op_t
 {
-	http_fetch_op_t(const std::string &hostname, int port, const std::function<void(const http_response_t &)> &callback);
+	http_fetch_op_t(const std::string &hostname, int port, const response_callback_t &&callback);
 
 private:
 	std::string hostname;
 	int port;
 	http_parser parser;
 	http_response_t response;
-	std::function<void(const http_response_t &res)> callback;
+	response_callback_t callback;
 
 	static void after_write(uv_write_t *write_req, int status);
 	static void on_close(uv_handle_t *handle);

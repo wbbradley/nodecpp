@@ -49,7 +49,7 @@ int on_message_complete(http_parser *parser)
 	return 0;
 }
 
-static http_parser_settings parser_settings = 
+static const http_parser_settings parser_settings = 
 {
 	on_message_begin,
 	on_url,
@@ -63,10 +63,10 @@ static http_parser_settings parser_settings =
 http_fetch_op_t::http_fetch_op_t(
 		const std::string &hostname,
 	   	int port,
-	   	const std::function<void(const http_response_t &)> &callback)
+	   	const response_callback_t &&callback)
 : hostname(hostname), port(port), callback(callback)
 {
-	http_parser_init(&parser, HTTP_REQUEST);
+	http_parser_init(&parser, HTTP_RESPONSE);
 }
 
 void http_fetch_op_t::after_write(uv_write_t *write_req, int status)
@@ -98,9 +98,13 @@ void http_fetch_op_t::on_read(uv_stream_t *tcp_handle, ssize_t nread, uv_buf_t b
 
 	if (nread > 0)
 	{
-		if (nread != http_parser_execute(&self.parser, &parser_settings, buf.base, nread))
+		auto parsed_count = http_parser_execute(&self.parser, &parser_settings,
+				buf.base, nread);
+		if (nread != parsed_count)
 		{
-			dlog(log_error, "unexpected thing : http_parser_execute didn't read all my bytes! (%s)\n",
+			dlog(log_error, "unexpected thing : http_parser_execute only parsed %d/%d bytes! (%s)\n",
+					parsed_count,
+					nread,
 					std::string(buf.base, nread).c_str());
 		}
 	}
@@ -121,7 +125,16 @@ uv_buf_t http_fetch_op_t::on_alloc(uv_handle_t* handle, size_t suggested_size)
 void http_fetch_op_t::after_connect(uv_connect_t *connect_req, int status)
 {
 	if (status < 0)
-		abort();
+	{
+		auto fetch_op = static_cast<http_fetch_op_t *>(connect_req->data);
+		dlog(log_error, "connection to %s failed\n",
+				fetch_op->hostname.c_str());
+
+		delete fetch_op;
+		delete connect_req;
+
+		return;
+	}
 
 	uv_write_t *write_req = new uv_write_t;
 	write_req->data = connect_req->data;
@@ -141,7 +154,6 @@ void http_fetch_op_t::after_connect(uv_connect_t *connect_req, int status)
 
 	delete buf.base;
 
-	assert(connect_req->handle->data == nullptr);
 	connect_req->handle->data = write_req->data;
 
 	uv_read_start(connect_req->handle, on_alloc, on_read);
@@ -157,7 +169,18 @@ void http_fetch_op_t::after_getaddrinfo(
 	uv_tcp_t *tcp_handle;
 	uv_connect_t *connect_req;
 	if (status < 0)
-		abort();
+	{
+		uv_freeaddrinfo(ai);
+
+		auto fetch_op = static_cast<http_fetch_op_t *>(gai_req->data);
+		dlog(log_error, "getaddrinfo to %s failed\n",
+				fetch_op->hostname.c_str());
+
+		delete fetch_op;
+		delete gai_req;
+
+		return;
+	}
 
 	tcp_handle = new uv_tcp_t;
 	uv_tcp_init(uv_default_loop(), tcp_handle);

@@ -46,7 +46,7 @@ build-dir:
 	@if test ! -d $(BUILD_DIR); then mkdir -p $(BUILD_DIR); fi
 
 $(JUMBLE_TARGET): $(JUMBLE_OBJECTS) $(HTTP_PARSER_OBJECTS)
-	$(LINKER) $(LINKER_OPTS) -luv -lhttp_parser $(JUMBLE_OBJECTS) -o $(JUMBLE_TARGET)
+	$(LINKER) $(LINKER_OPTS) -luv deps/http_parser/http_parser_g.o $(JUMBLE_OBJECTS) -o $(JUMBLE_TARGET)
 
 $(BUILD_DIR)/%.o: %.cpp
 	$(CPP) $(CFLAGS) $< -o $@

@@ -39,6 +39,15 @@ int main(int argc, char *argv[])
 	get_option(options, option_nodecpp, nodecpp);
 
 	http_get(nodecpp, 80, [=](const http_response_t &res) {
+			dlog(log_info, "res.version = %s\nres.code = %d\nres.reason = %s\n",
+				res.version.c_str(),
+				res.code,
+				res.reason.c_str());
+			for (auto &field : res.fields)
+			{
+				dlog(log_info, "%s: %s\n", field.key.c_str(),
+					field.value.c_str());
+			}
 			dlog(log_info, "http_get callback called\n");
 	});
 
