@@ -17,7 +17,9 @@ void log_flush();
 
 #ifdef DEBUG
 #define dlog(params...) log(params)
+#define dlog_assert(expr, params...) do { if (!(expr)) log(log_error, params); } while (0)
 #else
 #define dlog(params...)
+#define dlog_assert(expr, params...)
 #endif
 

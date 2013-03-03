@@ -12,8 +12,10 @@ struct http_request_t
 	http_request_t(http_method method, const std::string &target_uri);
 	http_method method;
 	std::string target_uri;
+	http_parser_url parsed_url;
 	unordered_map<std::string, std::string> query_params;
 
+	std::string uri_path() const;
 	const std::string &body() const { assert(method == HTTP_POST); return _body; }
 
 private:

@@ -53,8 +53,10 @@ void http_use_route(const std::string &path, http_method method, http_route_hand
 
 static int http_server_dispatch(http_connection_t &connection)
 {
+	http_request_t request((http_method)connection.parser.method, connection.url);
+
 	auto &http_server_routes = http_server_methods_routes[connection.parser.method];
-	auto iter = http_server_routes.find(connection.url);
+	auto iter = http_server_routes.find(request.uri_path());
 	if (iter == http_server_routes.end())
 	{
 		// TODO handle 404?
@@ -63,9 +65,9 @@ static int http_server_dispatch(http_connection_t &connection)
 		return 1;
 	}
 
-	http_request_t request((http_method)connection.parser.method, connection.url);
 	http_respond_t respond;
 	iter->second->handler(request, respond);
+
 	return 0;
 }
 
