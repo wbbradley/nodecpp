@@ -7,6 +7,7 @@
 #include "http.h"
 #include "logger_decls.h"
 #include "http_parser.h"
+#include "nodecpp_errors.h"
 
 struct http_fetch_op_t
 {
@@ -29,45 +30,45 @@ private:
 	friend void http_get(const std::string &hostname, int port, response_callback_t &&callback);
 };
 
-int on_url(http_parser *parser, const char *at, size_t length)
+int http_client_url(http_parser *parser, const char *at, size_t length)
 {
 	dlog(log_info, "%s : %s\n", __FUNCTION__, std::string(at, length).c_str());
 	return 0;
 }
 
-int on_header_field(http_parser *parser, const char *at, size_t length)
+int http_client_header_field(http_parser *parser, const char *at, size_t length)
 {
 	dlog(log_info, "%s : %s\n", __FUNCTION__, std::string(at, length).c_str());
 	return 0;
 }
 
-int on_header_value(http_parser *parser, const char *at, size_t length)
+int http_client_header_value(http_parser *parser, const char *at, size_t length)
 {
 	dlog(log_info, "%s : %s\n", __FUNCTION__, std::string(at, length).c_str());
 	return 0;
 }
 
-int on_body(http_parser *parser, const char *at, size_t length)
+int http_client_body(http_parser *parser, const char *at, size_t length)
 {
 	dlog(log_info, "%s : %s\n", __FUNCTION__, std::string(at, length).c_str());
 	return 0;
 }
 
-int on_message_begin(http_parser *parser)
+int http_client_message_begin(http_parser *parser)
 {
 	dlog(log_info, "%s : HTTP/%d.%d status = %d\n", __FUNCTION__,
 			parser->http_major, parser->http_minor, parser->status_code);
 	return 0;
 }
 
-int on_headers_complete(http_parser *parser)
+int http_client_headers_complete(http_parser *parser)
 {
 	dlog(log_info, "%s : HTTP/%d.%d status = %d\n", __FUNCTION__,
 			parser->http_major, parser->http_minor, parser->status_code);
 	return 0;
 }
 
-int on_message_complete(http_parser *parser)
+int http_client_message_complete(http_parser *parser)
 {
 	dlog(log_info, "%s : HTTP/%d.%d status = %d\n", __FUNCTION__,
 			parser->http_major, parser->http_minor, parser->status_code);
@@ -76,13 +77,13 @@ int on_message_complete(http_parser *parser)
 
 static const http_parser_settings parser_settings =
 {
-	on_message_begin,
-	on_url,
-	on_header_field,
-	on_header_value,
-	on_headers_complete,
-	on_body,
-	on_message_complete,
+	http_client_message_begin,
+	http_client_url,
+	http_client_header_field,
+	http_client_header_value,
+	http_client_headers_complete,
+	http_client_body,
+	http_client_message_complete,
 };
 
 http_fetch_op_t::http_fetch_op_t(
@@ -105,7 +106,7 @@ void http_fetch_op_t::on_close(uv_handle_t *handle)
 
 void http_fetch_op_t::on_read(uv_stream_t *tcp_handle, ssize_t nread, uv_buf_t buf)
 {
-	auto &self = *static_cast<http_fetch_op_t *>(tcp_handle->data);
+	auto &fetch_op = *static_cast<http_fetch_op_t *>(tcp_handle->data);
 
 	if (nread < 0)
 	{
@@ -113,20 +114,21 @@ void http_fetch_op_t::on_read(uv_stream_t *tcp_handle, ssize_t nread, uv_buf_t b
 		{
 			/* No more data. Close the connection. */
 			uv_close((uv_handle_t *)tcp_handle, on_close);
-			self.callback(self.response);
+			fetch_op.callback(fetch_op.response);
 		}
 		else
 		{
-			abort();
+			log_uv_errors();
 		}
 	}
 
 	if (nread > 0)
 	{
-		auto parsed_count = http_parser_execute(&self.parser, &parser_settings,
+		auto parsed_count = http_parser_execute(&fetch_op.parser, &parser_settings,
 				buf.base, nread);
 		if (nread != parsed_count)
 		{
+			log_http_errors(&fetch_op.parser);
 			dlog(log_error, "unexpected thing : http_parser_execute only parsed %d/%d bytes! (%s)\n",
 					parsed_count,
 					nread,

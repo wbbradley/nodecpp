@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 
 	uv_default_loop();
 
-	http_get_route("/", [](const http_get_request_t &req, http_respond_t &respond) {
+	http_use_route("/", HTTP_GET, [](const http_request_t &req, http_respond_t &respond) {
 		dlog(log_info, "received get against \"%s\"\n", req.target_uri.c_str());
 	});
 

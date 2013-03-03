@@ -31,6 +31,7 @@ SAMPLE_SOURCES = \
 				 cmd_options.cpp \
 				 disk.cpp \
 				 http_client.cpp \
+				 http_request.cpp \
 				 http_server.cpp \
 				 sample.cpp \
 				 logger.cpp \
