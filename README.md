@@ -142,10 +142,13 @@ performance characterstics as high-speed servers such as nginx, and node.js.
 
 # Build Instructions
 
-You will need to clone libuv in a directory next to your nodecpp directory, and
-build it prior to building nodecpp.
+* Install [md2pdf](https://github.com/joequery/md2pdf)
 
-To build nodecpp-sample, run `make` from within the nodecpp directory.
+From within the nodepp directory:
+
+1. `make -C deps/libuv`
+1. `make -C deps/http_parser`
+1. `make`
 
 --
 [Will Bradley](http://github.com/wbbradley)
