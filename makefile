@@ -5,7 +5,7 @@ NDEBUG_FLAGS := -g -O3
 ifeq ($(UNAME),Darwin)
 	CPP = clang++ -std=c++0x -stdlib=libc++ -DMACOS
 	CC = clang -DMACOS
-	LINKER = clang++ -stdlib=libc++ -Ldeps/http_parser -L../libuv -framework Cocoa
+	LINKER = clang++ -stdlib=libc++ -Ldeps/http_parser -Ldeps/libuv -framework Cocoa
 	LINKER_OPTS := $(NDEBUG_FLAGS)
 	LINKER_DEBUG_OPTS := $(DEBUG_FLAGS)
 else
@@ -19,7 +19,7 @@ endif
 BUILD_DIR = build
 
 CFLAGS := \
-	-I../libuv/include \
+	-Ideps/libuv/include \
 	-Ideps/http_parser \
 	-c \
 	-Wall \
