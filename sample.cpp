@@ -12,15 +12,14 @@
 #include <uv.h>
 #include <functional>
 #include <assert.h>
-#include "http_fetch_op.h"
+#include "http.h"
 
-const char *option_nodecpp = "nodecpp";
+const char *option_get = "GET";
 const char *option_verbose = "verbose";
-
 
 cmd_option_t cmd_options[] =
 {
-	{ option_nodecpp, "-j" /*opt*/, true /*mandatory*/, true /*has_data*/ },
+	{ option_get, "-g" /*opt*/, false /*mandatory*/, true /*has_data*/ },
 	{ option_verbose, "-v" /*opt*/, false /*mandatory*/, false /*has_data*/ },
 };
 
@@ -35,21 +34,27 @@ int main(int argc, char *argv[])
 	else
 		log_enable(log_error);
 
-	std::string nodecpp;
-	get_option(options, option_nodecpp, nodecpp);
+	uv_default_loop();
 
-	http_get(nodecpp, 80, [=](const http_response_t &res) {
-			dlog(log_info, "res.version = %s\nres.code = %d\nres.reason = %s\n",
-				res.version.c_str(),
-				res.code,
-				res.reason.c_str());
+	http_get_route("/", [](const http_get_request_t &req, http_respond_t &respond) {
+		dlog(log_info, "received get against \"%s\"\n", req.target_uri.c_str());
+	});
+
+	http_listen(80 /*port*/, 1000 /*backlog*/);
+
+	std::string url;
+	if (get_option(options, option_get, url))
+	{
+		/* issue a GET request */
+		http_get(url, 80 /*port*/, [](const http_response_t &res) {
 			for (auto &field : res.fields)
 			{
 				dlog(log_info, "%s: %s\n", field.key.c_str(),
 					field.value.c_str());
 			}
 			dlog(log_info, "http_get callback called\n");
-	});
+		});
+	}
 
 	uv_run(uv_default_loop(), UV_RUN_DEFAULT);
 

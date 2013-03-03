@@ -27,26 +27,31 @@ CFLAGS := \
 	-DDEBUG \
 	-g \
 
-JUMBLE_SOURCES = \
-				 http_fetch_op.cpp \
+SAMPLE_SOURCES = \
 				 cmd_options.cpp \
 				 disk.cpp \
-				 nodecpp.cpp \
+				 http_client.cpp \
+				 http_server.cpp \
+				 sample.cpp \
 				 logger.cpp \
+				 nodecpp_errors.cpp \
 				 utils.cpp \
 
-JUMBLE_OBJECTS = $(addprefix $(BUILD_DIR)/,$(JUMBLE_SOURCES:.cpp=.o))
-JUMBLE_TARGET = nodecpp
+SAMPLE_OBJECTS = $(addprefix $(BUILD_DIR)/,$(SAMPLE_SOURCES:.cpp=.o))
+SAMPLE_TARGET = nodecpp-sample
 
-TARGETS = $(JUMBLE_TARGET)
+TARGETS = $(SAMPLE_TARGET)
 
-all: build-dir $(TARGETS)
+all: build-dir $(TARGETS) README.pdf
+
+README.pdf: README.md
+	@md2pdf README.md || (touch README.pdf && rm README.pdf)
 
 build-dir:
 	@if test ! -d $(BUILD_DIR); then mkdir -p $(BUILD_DIR); fi
 
-$(JUMBLE_TARGET): $(JUMBLE_OBJECTS) $(HTTP_PARSER_OBJECTS)
-	$(LINKER) $(LINKER_OPTS) -luv deps/http_parser/http_parser_g.o $(JUMBLE_OBJECTS) -o $(JUMBLE_TARGET)
+$(SAMPLE_TARGET): $(SAMPLE_OBJECTS) $(HTTP_PARSER_OBJECTS)
+	$(LINKER) $(LINKER_OPTS) -luv deps/http_parser/http_parser_g.o $(SAMPLE_OBJECTS) -o $(SAMPLE_TARGET)
 
 $(BUILD_DIR)/%.o: %.cpp
 	$(CPP) $(CFLAGS) $< -o $@
@@ -54,7 +59,7 @@ $(BUILD_DIR)/%.o: %.cpp
 $(BUILD_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) $< -o $@
 
-CLEAN = rm -rf $(BUILD_DIR)/*.o $(TARGETS)
+CLEAN = rm -rf $(BUILD_DIR) README.pdf $(TARGETS)
 
 clean:
 	$(CLEAN)

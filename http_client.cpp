@@ -1,8 +1,33 @@
-#include "http_fetch_op.h"
-#include "logger_decls.h"
+#include <string>
+#include <functional>
+#include <uv.h>
 #include <sstream>
 #include <assert.h>
 #include <utility>
+#include "http.h"
+#include "logger_decls.h"
+#include "http_parser.h"
+
+struct http_fetch_op_t
+{
+	http_fetch_op_t(const std::string &hostname, int port, const response_callback_t &&callback);
+
+private:
+	std::string hostname;
+	int port;
+	http_parser parser;
+	http_response_t response;
+	response_callback_t callback;
+
+	static void after_write(uv_write_t *write_req, int status);
+	static void on_close(uv_handle_t *handle);
+	static void on_read(uv_stream_t *tcp_handle, ssize_t nread, uv_buf_t buf);
+	static uv_buf_t on_alloc(uv_handle_t* handle, size_t suggested_size);
+	static void after_connect(uv_connect_t *connect_req, int status);
+	static void after_getaddrinfo(uv_getaddrinfo_t *gai_req, int status, struct addrinfo *ai);
+
+	friend void http_get(const std::string &hostname, int port, response_callback_t &&callback);
+};
 
 int on_url(http_parser *parser, const char *at, size_t length)
 {
@@ -49,7 +74,7 @@ int on_message_complete(http_parser *parser)
 	return 0;
 }
 
-static const http_parser_settings parser_settings = 
+static const http_parser_settings parser_settings =
 {
 	on_message_begin,
 	on_url,
