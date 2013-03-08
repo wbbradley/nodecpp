@@ -31,7 +31,9 @@ SAMPLE_SOURCES = \
 				 cmd_options.cpp \
 				 disk.cpp \
 				 http_client.cpp \
+				 http_connection.cpp \
 				 http_request.cpp \
+				 http_response.cpp \
 				 http_server.cpp \
 				 sample.cpp \
 				 logger.cpp \
@@ -39,11 +41,19 @@ SAMPLE_SOURCES = \
 				 utils.cpp \
 
 SAMPLE_OBJECTS = $(addprefix $(BUILD_DIR)/,$(SAMPLE_SOURCES:.cpp=.o))
-SAMPLE_TARGET = nodecpp-sample
+SAMPLE_TARGET = sample
 
 TARGETS = $(SAMPLE_TARGET)
 
+LIBUV_LIB := deps/libuv/libuv.a
+HTTP_PARSER_LIB := deps/http_parser/http_parser_g.o
 all: build-dir $(TARGETS) README.pdf
+
+$(LIBUV_LIB):
+	make -C deps/libuv
+
+$(HTTP_PARSER_LIB):
+	make -C deps/http_parser
 
 README.pdf: README.md
 	@md2pdf README.md || (touch README.pdf && rm README.pdf)
@@ -51,8 +61,8 @@ README.pdf: README.md
 build-dir:
 	@if test ! -d $(BUILD_DIR); then mkdir -p $(BUILD_DIR); fi
 
-$(SAMPLE_TARGET): $(SAMPLE_OBJECTS) $(HTTP_PARSER_OBJECTS)
-	$(LINKER) $(LINKER_OPTS) -luv deps/http_parser/http_parser_g.o $(SAMPLE_OBJECTS) -o $(SAMPLE_TARGET)
+$(SAMPLE_TARGET): $(SAMPLE_OBJECTS) $(LIBUV_LIB) $(HTTP_PARSER_LIB)
+	$(LINKER) $(LINKER_OPTS) -luv $(HTTP_PARSER_LIB) $(SAMPLE_OBJECTS) -o $(SAMPLE_TARGET)
 
 $(BUILD_DIR)/%.o: %.cpp
 	$(CPP) $(CFLAGS) $< -o $@
@@ -64,4 +74,6 @@ CLEAN = rm -rf $(BUILD_DIR) README.pdf $(TARGETS)
 
 clean:
 	$(CLEAN)
+	(cd deps/libuv && make clean)
+	(cd deps/http_parser && make clean)
 

@@ -13,15 +13,6 @@
 
 #define case_error(error) case error: error_string = #error; break
 
-#define KNRM  "\x1B[0m"
-#define KRED  "\x1B[31m"
-#define KGRN  "\x1B[32m"
-#define KYEL  "\x1B[33m"
-#define KBLU  "\x1B[34m"
-#define KMAG  "\x1B[35m"
-#define KCYN  "\x1B[36m"
-#define KWHT  "\x1B[37m"
-
 bool check_errno(const char *tag)
 {
 	int err = errno;
@@ -365,4 +356,12 @@ double get_current_time()
 	double time_now = tv.tv_sec + (double(tv.tv_usec) / 1000000.0);
 	return time_now;
 }
+
+std::string ellipsis(const std::string &text, int max_len)
+{
+	max_len = std::max(3, max_len);
+
+	return (text.size() > max_len - 3) ? (std::string(text.c_str(), 10) + "...") : text;
+}
+
 

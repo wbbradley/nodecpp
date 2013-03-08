@@ -3,7 +3,7 @@
 #include "nodecpp_errors.h"
 #include "utils.h"
 
-#ifdef DEBUG
+#ifdef DEBUG_EX
 void dump_url(const char *url, const struct http_parser_url *u)
 {
 	unsigned int i;
@@ -27,16 +27,18 @@ void dump_url(const char *url, const struct http_parser_url *u)
 }
 #endif
 
-http_request_t::http_request_t(http_method method, const std::string &target_uri) : method(method), target_uri(target_uri)
+http_request_t::http_request_t(http_method method, const std::string &target_uri)
+	: method(method), target_uri(target_uri)
 {
 	memset(&parsed_url, 0, sizeof(parsed_url));
-	if (http_parser_parse_url(target_uri.c_str(), target_uri.size(), false /*is_connect*/, &parsed_url))
+	if (http_parser_parse_url(target_uri.c_str(), target_uri.size(),
+			   	false /*is_connect*/, &parsed_url))
 	{
 		dlog(log_error, "error parsing target-uri \"%s\"\n", target_uri.c_str());
 	}
 	else
 	{
-		debug(dump_url(target_uri.c_str(), &parsed_url));
+		debug_ex(dump_url(target_uri.c_str(), &parsed_url));
 	}
 }
 

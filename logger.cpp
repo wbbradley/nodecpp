@@ -135,7 +135,31 @@ void log(log_level_t level, const char *format, ...)
 	{
 		va_list args;
 		va_start(args, format);
+		switch (level)
+		{
+		case log_error:
+			fprintf(stderr, "%s", KRED);
+			break;
+		case log_warning:
+			fprintf(stderr, "%s", KYEL);
+			break;
+		case log_info:
+			fprintf(stderr, "%s", KWHT);
+			break;
+		default:
+			break;
+		}
 		vfprintf(stderr, format, args);
+		switch (level)
+		{
+		case log_error:
+		case log_warning:
+		case log_info:
+			fprintf(stderr, "%s", KNRM);
+			break;
+		default:
+			break;
+		}
 		va_end(args);
 		return;
 	}

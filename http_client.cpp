@@ -17,7 +17,7 @@ private:
 	std::string hostname;
 	int port;
 	http_parser parser;
-	http_response_t response;
+	http_client_response_t response;
 	response_callback_t callback;
 
 	static void after_write(uv_write_t *write_req, int status);
@@ -226,7 +226,7 @@ void http_fetch_op_t::after_getaddrinfo(
 void http_get(
 		const std::string &hostname,
 	   	int port,
-		std::function<void(const http_response_t &)> &&callback)
+		std::function<void(const http_client_response_t &)> &&callback)
 {
 	http_fetch_op_t *http_fetch_op = new http_fetch_op_t(hostname, port, std::move(callback));
 

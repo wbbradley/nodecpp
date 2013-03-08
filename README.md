@@ -146,9 +146,7 @@ performance characterstics as high-speed servers such as nginx, and node.js.
 
 From within the nodepp directory:
 
-1. `make -C deps/libuv`
-1. `make -C deps/http_parser`
-1. `make`
+`make`
 
 --
 [Will Bradley](http://github.com/wbbradley)
