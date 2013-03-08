@@ -14,9 +14,11 @@ platform's fundamental design component is asynchronicity through continuations
 via C++11 lambdas. For example:
 
 	/* setup a server to dynamically return GET requests from an alternate host */
-	http_get_route("/", [](const http_get_request_t &req, http_respond_t &respond) {
-		http_get("http://example.com/proxy/dest", 80 /*port*/, [=](const http_response_t &res) {
-			respond.send(res.fields["Content-type"], res.body);
+	http_get_route("/", [](const http_request_ptr_t &req, const http_response_ptr_t &response) {
+		http_get("http://example.com/proxy/dest", 80 /*port*/, [=](const http_client_response_t &res) {
+			response->set_response(200, "OK", res.fields["Content-type"]);
+			response->send(res.body);
+			response->end();
 		});
 	});
 
