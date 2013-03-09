@@ -5,11 +5,12 @@
 #include <assert.h>
 #include "nocopy.h"
 #include <memory>
+#include "utils.h"
 
 struct http_connection_t;
 
 /* http_request_t informs the server handler what the client is asking for */
-struct http_request_t
+struct http_request_t : static_count<http_request_t>
 {
 	friend struct http_connection_t;
 
@@ -21,6 +22,8 @@ struct http_request_t
 
 	std::string uri_path() const;
 	const std::string &body() const { assert(method == HTTP_POST); return _body; }
+
+	bool keep_alive() const;
 
 private:
 	http_parser parser;

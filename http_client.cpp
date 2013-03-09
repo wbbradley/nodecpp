@@ -30,45 +30,51 @@ private:
 	friend void http_get(const std::string &hostname, int port, response_callback_t &&callback);
 };
 
-int http_client_url(http_parser *parser, const char *at, size_t length)
+static int http_client_url(http_parser *parser, const char *at, size_t length)
 {
 	dlog(log_info, "%s : %s\n", __FUNCTION__, std::string(at, length).c_str());
 	return 0;
 }
 
-int http_client_header_field(http_parser *parser, const char *at, size_t length)
+static int http_client_header_field(http_parser *parser, const char *at, size_t length)
 {
 	dlog(log_info, "%s : %s\n", __FUNCTION__, std::string(at, length).c_str());
 	return 0;
 }
 
-int http_client_header_value(http_parser *parser, const char *at, size_t length)
+static int http_client_header_value(http_parser *parser, const char *at, size_t length)
 {
 	dlog(log_info, "%s : %s\n", __FUNCTION__, std::string(at, length).c_str());
 	return 0;
 }
 
-int http_client_body(http_parser *parser, const char *at, size_t length)
+static int http_client_body(http_parser *parser, const char *at, size_t length)
 {
 	dlog(log_info, "%s : %s\n", __FUNCTION__, std::string(at, length).c_str());
 	return 0;
 }
 
-int http_client_message_begin(http_parser *parser)
+static int http_client_message_begin(http_parser *parser)
+{
+	dlog(log_info, "%s\n", __FUNCTION__);
+	return 0;
+}
+
+static int http_client_status_complete(http_parser *parser)
 {
 	dlog(log_info, "%s : HTTP/%d.%d status = %d\n", __FUNCTION__,
 			parser->http_major, parser->http_minor, parser->status_code);
 	return 0;
 }
 
-int http_client_headers_complete(http_parser *parser)
+static int http_client_headers_complete(http_parser *parser)
 {
 	dlog(log_info, "%s : HTTP/%d.%d status = %d\n", __FUNCTION__,
 			parser->http_major, parser->http_minor, parser->status_code);
-	return 0;
+	return 1;
 }
 
-int http_client_message_complete(http_parser *parser)
+static int http_client_message_complete(http_parser *parser)
 {
 	dlog(log_info, "%s : HTTP/%d.%d status = %d\n", __FUNCTION__,
 			parser->http_major, parser->http_minor, parser->status_code);
@@ -79,6 +85,7 @@ static const http_parser_settings parser_settings =
 {
 	http_client_message_begin,
 	http_client_url,
+	http_client_status_complete,
 	http_client_header_field,
 	http_client_header_value,
 	http_client_headers_complete,

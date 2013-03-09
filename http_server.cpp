@@ -77,8 +77,8 @@ void dump_routes()
 }
 #endif
 
-int http_server_dispatch(
-		http_connection_ptr_t &connection,
+void http_server_dispatch(
+		const http_connection_ptr_t &connection,
 	   	const http_request_ptr_t &request)
 {
 	debug(dump_routes());
@@ -89,7 +89,8 @@ int http_server_dispatch(
 	if (iter == http_server_routes.end())
 	{
 		// TODO handle 404?
-		dlog(log_info, "route not found for \"%s\"\n", request->uri_path().c_str());
+		dlog(log_info, "route not found for \"%s\"\n",
+				request->uri_path().c_str());
 
 		if (!uv_is_closing((uv_handle_t *)connection->client_handle))
 		{
@@ -100,20 +101,20 @@ int http_server_dispatch(
 			/* For now: Close the connection. */
 			uv_close((uv_handle_t *)connection->client_handle, http_server_connection_close);
 		}
-
-		return 1;
 	}
+	else
+	{
 
-	dlog(log_warning, "%s routing to handler for connection %ju [%d]\n",
-			__FUNCTION__, uintmax_t(connection->client_handle),
-			connection->instance_id);
+		dlog(log_warning, "%s routing to handler for connection %ju [%d]\n",
+				__FUNCTION__, uintmax_t(connection->client_handle),
+				connection->instance_id);
 
-	http_response_ptr_t response(new http_response_t(connection));
-	auto &route_info = iter->second;
-	route_info->handler(request, response);
-
-	return 0;
+		http_response_ptr_t response(new http_response_t(connection, request->keep_alive()));
+		auto &route_info = iter->second;
+		route_info->handler(request, response);
+	}
 }
+
 
 static uv_buf_t http_server_alloc(uv_handle_t *handle, size_t suggested_size)
 {

@@ -6,7 +6,7 @@
 #include <sstream>
 #include "http_server.h"
 
-extern int http_server_dispatch(http_connection_ptr_t &connection, const http_request_ptr_t &request);
+extern void http_server_dispatch(const http_connection_ptr_t &connection, const http_request_ptr_t &request);
 
 http_connection_t::http_connection_t(uv_stream_t *client_handle) : client_handle(client_handle)
 {
@@ -21,7 +21,7 @@ std::shared_ptr<http_request_t> http_connection_t::pop_request()
 	dlog(log_warning, "%s called on [%d]\n", __FUNCTION__, instance_id);
 	reset_parser();
 	std::shared_ptr<http_request_t> top_request;
-	std::swap(top_request, request);
+	std::swap(top_request, request_being_created);
 	return top_request;
 }
 
@@ -34,7 +34,7 @@ void http_connection_t::reset_parser()
 void http_connection_t::start_request(http_method method, const std::string &target_uri)
 {
 	dlog(log_warning, "%s called on [%d]\n", __FUNCTION__, instance_id);
-	request.reset(new http_request_t(method, target_uri));
+	request_being_created.reset(new http_request_t(method, target_uri));
 }
 
 static int http_connection_url(http_parser *parser, const char *at, size_t length)
@@ -67,6 +67,12 @@ static int http_connection_body(http_parser *parser, const char *at, size_t leng
 
 static int http_connection_message_begin(http_parser *parser)
 {
+	dlog(log_info, "%s\n", __FUNCTION__);
+	return 0;
+}
+
+static int http_connection_status_complete(http_parser *parser)
+{
 	dlog(log_info, "%s : HTTP/%d.%d status = %d\n", __FUNCTION__,
 			parser->http_major, parser->http_minor, parser->status_code);
 	return 0;
@@ -85,14 +91,16 @@ static int http_connection_message_complete(http_parser *parser)
 			parser->http_major, parser->http_minor, parser->status_code);
 	auto connection = ((http_connection_t *)parser->data)->shared_from_this();
 
+	connection->queue_request(connection->pop_request());
 
-	return http_server_dispatch(connection, connection->pop_request());
+	return 0;
 }
 
 static const http_parser_settings parser_settings =
 {
 	http_connection_message_begin,
 	http_connection_url,
+	http_connection_status_complete,
 	http_connection_header_field,
 	http_connection_header_value,
 	http_connection_headers_complete,
@@ -146,7 +154,6 @@ void http_connection_t::http_connection_write_cb(uv_write_t *req, int status)
 	auto *write_data = (http_connection_write_data_t *)req->data;
 	bool close_after_write = write_data->close_after_write;
 
-#if 0
 	if (status != 0)
 	{
 		dlog(log_warning, "http_connection_write_cb : write "
@@ -159,7 +166,6 @@ void http_connection_t::http_connection_write_cb(uv_write_t *req, int status)
 		dlog(log_info, "http_connection_write_cb : write of \"%s\" succeeded\n",
 				ellipsis(write_data->payload, 10).c_str());
 	}
-#endif
 
 	auto connection = write_data->connection;
 
@@ -192,12 +198,49 @@ void http_connection_t::http_connection_write_cb(uv_write_t *req, int status)
 	delete req;
 }
 
+void http_connection_t::request_completed()
+{
+	request_in_service.reset();
+
+	// TODO eliminate the recursion that could happen here
+	// by queueing the dispatch
+	service_next_request();
+}
+
+void http_connection_t::service_next_request()
+{
+	assert(request_in_service == nullptr);
+
+	if (!request_queue.empty())
+	{
+		dlog(log_warning, "%s : request queue not empty\n", __FUNCTION__);
+		request_in_service = request_queue.front();
+		request_queue.pop();
+		http_server_dispatch(shared_from_this(), request_in_service);
+	}
+}
+
+void http_connection_t::queue_request(const http_request_ptr_t &request)
+{
+	if (request_queue.empty() && (request_in_service == nullptr))
+	{
+		request_in_service = request;
+		dlog(log_warning, "%s : dispatching\n", __FUNCTION__);
+		http_server_dispatch(shared_from_this(), request_in_service);
+	}
+	else
+	{
+		request_queue.push(request);
+	}
+}
+
 void http_connection_t::queue_write(
 		const std::string &write_blob,
 	   	bool close_after_write)
 {
 	if (client_handle != nullptr)
 	{
+		assert(!uv_is_closing((uv_handle_t *)client_handle));
 		dlog(log_info, "queue_write on socket handle %ju called with \"%s\"\n", uintmax_t(client_handle), write_blob.c_str());
 		/* create a new write request */
 		uv_write_t *write_req = new uv_write_t;

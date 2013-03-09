@@ -4,8 +4,8 @@
 #include <sstream>
 #include "http_connection.h"
 
-http_response_t::http_response_t(const http_connection_ptr_t &connection)
-	: weak_connection(connection)
+http_response_t::http_response_t(const http_connection_ptr_t &connection, bool keep_alive)
+	: weak_connection(connection), keep_alive(keep_alive)
 {
 }
 
@@ -43,13 +43,16 @@ void http_response_t::send(
 		bool content_complete,
 		bool close_after_write)
 {
+	if (content_complete && !keep_alive)
+		close_after_write = true;
+
 	auto connection = weak_connection.lock();
 	if (connection != nullptr)
 	{
 		std::stringstream ss;
 		if (!sent_headers)
 		{
-			ss << "HTTP/1.1 " << code << " " << reason << "\r\n";
+			ss << "HTTP/" << (keep_alive ? "1.1 ": "1.0 ") << code << " " << reason << "\r\n";
 			for (auto &field_pair : fields)
 			{
 				ss << field_pair.first << ": " << field_pair.second << "\r\n";
@@ -57,23 +60,28 @@ void http_response_t::send(
 			if (payload.size() != 0)
 			{
 				ss << "Content-Type: " << content_type << "\r\n";
-				ss << "Transfer-Encoding: chunked\r\n\r\n";
+				//ss << "Transfer-Encoding: chunked\r\n";
+				if (keep_alive)
+					ss << "Connection: keep-alive\r\n";
+				ss << "Content-Length: " << payload.size() << "\r\n";
+				ss << "\r\n";
 			}
 		}
 
-		if (sent_headers || (payload.size() != 0))
-		{
-			ss << std::hex << payload.size() << "\r\n";
-			ss.write(payload.c_str(), payload.size());
-			ss << "\r\n";
-		}
+		//ss << std::hex << payload.size() << "\r\n";
+		ss.write(payload.c_str(), payload.size());
+		//ss << "\r\n";
 
-		if (content_complete)
-			ss << "\r\n";
-
-		connection->queue_write(ss.str(), close_after_write);
+		if (payload.size() != 0 || close_after_write)
+			connection->queue_write(ss.str(), close_after_write);
 
 		sent_headers = true;
+
+		if (content_complete)
+		{
+			dlog(log_info, "request completed\n");
+			connection->request_completed();
+		}
 	}
 	else
 	{

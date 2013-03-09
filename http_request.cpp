@@ -48,3 +48,8 @@ std::string http_request_t::uri_path() const
 	return std::string(target_uri.c_str() + parsed_url.field_data[UF_PATH].off, parsed_url.field_data[UF_PATH].len);
 }
 
+bool http_request_t::keep_alive() const
+{
+   	return parser.http_major == 1 && parser.http_minor == 1;
+}
+
