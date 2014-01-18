@@ -6,7 +6,7 @@
 #include <sstream>
 #include "http_server.h"
 
-extern void http_server_dispatch(const http_connection_ptr_t &connection, const http_request_ptr_t &request);
+extern void http_server_dispatch(const http_connection_ptr_t &connection, const http_request_ptr_t request);
 
 http_connection_t::http_connection_t(uv_stream_t *client_handle) : client_handle(client_handle)
 {
@@ -200,33 +200,31 @@ void http_connection_t::http_connection_write_cb(uv_write_t *req, int status)
 
 void http_connection_t::request_completed()
 {
-	request_in_service.reset();
-
-	// TODO eliminate the recursion that could happen here
-	// by queueing the dispatch
+	dlog(log_info, "----");
+	static bool in_func = false;
+	assert(!in_func);
+	in_func = true;
 	service_next_request();
+	in_func = false;
 }
 
 void http_connection_t::service_next_request()
 {
-	assert(request_in_service == nullptr);
-
 	if (!request_queue.empty())
 	{
 		dlog(log_warning, "%s : request queue not empty\n", __FUNCTION__);
-		request_in_service = request_queue.front();
+		auto request = request_queue.front();
 		request_queue.pop();
-		http_server_dispatch(shared_from_this(), request_in_service);
+		http_server_dispatch(shared_from_this(), request);
 	}
 }
 
 void http_connection_t::queue_request(const http_request_ptr_t &request)
 {
-	if (request_queue.empty() && (request_in_service == nullptr))
+	if (request_queue.empty())
 	{
-		request_in_service = request;
 		dlog(log_warning, "%s : dispatching\n", __FUNCTION__);
-		http_server_dispatch(shared_from_this(), request_in_service);
+		http_server_dispatch(shared_from_this(), request);
 	}
 	else
 	{
@@ -246,7 +244,7 @@ void http_connection_t::queue_write(
 		uv_write_t *write_req = new uv_write_t;
 
 		/* create a new data nugget for the write request */
-		http_connection_write_data_t *write_data = new http_connection_write_data_t(shared_from_this(), write_blob, close_after_write);
+		auto *write_data = new http_connection_write_data_t(shared_from_this(), write_blob, close_after_write);
 		write_req->data = write_data;
 
 		/* create pointers to the data nugget */

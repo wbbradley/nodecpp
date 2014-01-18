@@ -77,7 +77,6 @@ protected:
 			std::stringstream ss;
 			ss << __PRETTY_FUNCTION__ << " : unexpected : too many objects exist.";
 			dlog(log_info, ss.str().c_str());
-			//__debugbreak;
 		}
 #endif // DEBUG
 	}

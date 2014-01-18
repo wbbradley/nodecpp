@@ -31,7 +31,6 @@ private:
 
 	/* request is currently being built up */
 	http_request_ptr_t request_being_created;
-	http_request_ptr_t request_in_service;
 	std::queue<http_request_ptr_t> request_queue;
 
 	void reset_parser();

@@ -77,9 +77,21 @@ void dump_routes()
 }
 #endif
 
+template <typename Request, typename Response>
+void http_server_error(Request &request, Response &response)
+{
+	dlog(log_error, "no handler registered for request path %s",
+		request->uri_path().c_str());
+	response->set_response(404, "OK", "text/html");
+	std::stringstream ss;
+	ss << "<html><body>Resource not found</body></html>";
+	response->send(ss.str());
+	response->end();
+}
+
 void http_server_dispatch(
 		const http_connection_ptr_t &connection,
-	   	const http_request_ptr_t &request)
+	   	const http_request_ptr_t request)
 {
 	debug(dump_routes());
 	dlog(log_info, "dispatch is looking for [%d][%s]\n", (int)request->method,
@@ -88,6 +100,9 @@ void http_server_dispatch(
 	auto iter = http_server_routes.find(request->uri_path());
 	if (iter == http_server_routes.end())
 	{
+		http_response_ptr_t response(new http_response_t(connection, request->keep_alive()));
+		http_server_error(request, response);
+
 		// TODO handle 404?
 		dlog(log_info, "route not found for \"%s\"\n",
 				request->uri_path().c_str());
@@ -104,7 +119,6 @@ void http_server_dispatch(
 	}
 	else
 	{
-
 		dlog(log_warning, "%s routing to handler for connection %ju [%d]\n",
 				__FUNCTION__, uintmax_t(connection->client_handle),
 				connection->instance_id);

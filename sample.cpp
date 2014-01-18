@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 		response->end();
 	});
 
-	http_listen(80 /*port*/, 100000 /*backlog*/);
+	http_listen(8000 /*port*/, 100000 /*backlog*/);
 
 	std::string url;
 	if (get_option(options, option_get, url))
