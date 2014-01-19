@@ -71,7 +71,8 @@ static int http_client_headers_complete(http_parser *parser)
 {
 	dlog(log_info, "%s : HTTP/%d.%d status = %d\n", __FUNCTION__,
 			parser->http_major, parser->http_minor, parser->status_code);
-	return 1;
+	// TODO: handle Transfer-Encoding: chunked
+	return (parser->content_length == 0) ? 1 : 0;
 }
 
 static int http_client_message_complete(http_parser *parser)
@@ -221,11 +222,23 @@ void http_fetch_op_t::after_getaddrinfo(
 
 	connect_req = new uv_connect_t;
 	connect_req->data = gai_req->data;
-	uv_tcp_connect(connect_req,
+	status = uv_tcp_connect(connect_req,
 			tcp_handle,
 			*(struct sockaddr_in *)ai->ai_addr,
 			after_connect);
-
+	if (status < 0)
+	{
+		// HACKHACK: should actually interpret sa_family and choose correct
+		// function in the first place
+		status = uv_tcp_connect(connect_req,
+				tcp_handle,
+				*(struct sockaddr_in *)ai->ai_addr,
+				after_connect);
+		if (status < 0)
+		{
+			dlog(log_error, "error %d in uv_tcp_connect\n", status);
+		}
+	}
 	delete gai_req;
 	uv_freeaddrinfo(ai);
 }

@@ -36,31 +36,11 @@ int main(int argc, char *argv[])
 
 	uv_default_loop();
 
-	http_use_route("/", HTTP_GET, [](const http_request_ptr_t &request, const http_response_ptr_t &response) {
-		dlog(log_info, "received get against \"%s\"\n",
-			request->uri_path().c_str());
-		response->set_response(200, "OK", "text/html");
-		response->send("<html>SUCCESS!</html>");
-		response->end();
-	});
-
-	http_use_route("/objects", HTTP_GET, [](const http_request_ptr_t &request, const http_response_ptr_t &response) {
-		dlog(log_info, "received get against \"%s\"\n",
-			request->uri_path().c_str());
-		response->set_response(200, "OK", "text/html");
-		std::stringstream ss;
-		ss << "<code>report<br/>test</code>";
-		response->send(ss.str());
-		response->end();
-	});
-
-	http_listen(8000 /*port*/, 100000 /*backlog*/);
-
 	std::string url;
 	if (get_option(options, option_get, url))
 	{
 		/* issue a GET request */
-		http_get(url, 80 /*port*/, [](const http_client_response_t &res) {
+		http_get(url, 8080 /*port*/, [](const http_client_response_t &res) {
 			for (auto &field : res.fields)
 			{
 				dlog(log_info, "%s: %s\n", field.key.c_str(),
@@ -69,7 +49,29 @@ int main(int argc, char *argv[])
 			dlog(log_info, "http_get callback called\n");
 		});
 	}
+	else
+	{
+		http_use_route("/", HTTP_GET, [](const http_request_ptr_t &request, const http_response_ptr_t &response) {
+			dlog(log_info, "received get against \"%s\"\n",
+				request->uri_path().c_str());
+			response->set_response(200, "OK", "text/html");
+			response->send("<html>SUCCESS!</html>");
+			response->end();
+		});
 
+		http_use_route("/objects", HTTP_GET, [](const http_request_ptr_t &request, const http_response_ptr_t &response) {
+			dlog(log_info, "received get against \"%s\"\n",
+				request->uri_path().c_str());
+			response->set_response(200, "OK", "text/html");
+			std::stringstream ss;
+			ss << "<code>report<br/>test</code>";
+			response->send(ss.str());
+			response->end();
+		});
+
+		/* Consider consulting ulimit -aH as a signpost for what's a good backlog? */
+		http_listen(8000 /*port*/, 6000 /*backlog*/);
+	}
 	uv_run(uv_default_loop(), UV_RUN_DEFAULT);
 
 	return EXIT_SUCCESS;

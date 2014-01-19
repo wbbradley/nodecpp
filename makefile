@@ -47,6 +47,7 @@ TARGETS = $(SAMPLE_TARGET)
 
 LIBUV_LIB := deps/libuv/libuv.a
 HTTP_PARSER_LIB := deps/http_parser/http_parser_g.o
+
 all: build-dir $(TARGETS) README.pdf
 
 $(LIBUV_LIB):
